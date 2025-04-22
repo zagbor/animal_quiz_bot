@@ -35,7 +35,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_data[user_id] = {"answers": [], "current_q": 0}
         await send_question(update, context)
     elif query.data == "support":
-        await query.message.reply_text("Вы можете обратиться в нашу поддержку по почте support@example.com")
+        await query.message.reply_text("Вы можете обратиться в нашу поддержку по почте pcn@culture.mos.ru")
         await start_over(update, context)
     elif query.data == "restart":
         await start_over(update, context)
@@ -78,6 +78,10 @@ async def send_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=reply_markup
         )
 
+from telegram import InlineKeyboardMarkup, InlineKeyboardButton, InputFile
+from collections import Counter
+import os
+
 async def show_result(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     answers = user_data[user_id]["answers"]
@@ -88,14 +92,24 @@ async def show_result(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text="Вы не ответили ни на один вопрос."
         )
         return
-    
-    result = Counter(answers).most_common(1)[0][0]
-    message = results.get(result, "Ты уникален, как и твой выбор!")
-    message += "\n\nХочешь заботиться об этом животном? Узнай больше о программе опеки: https://moscowzoo.ru/my-animal"
 
-    keyboard = InlineKeyboardMarkup([[
-        InlineKeyboardButton("🔁 Попробовать ещё раз", callback_data="restart")
-    ]])
+    result = Counter(answers).most_common(1)[0][0]
+    result_text = results.get(result, "Ты уникален, как и твой выбор!")
+    message = (
+        f"{result_text}\n\n"
+        "Хочешь заботиться об этом животном? Узнай больше о программе опеки: "
+        "https://moscowzoo.ru/my-animal"
+    )
+
+    # Кнопки: перезапуск и поделиться
+    bot_link = "https://t.me/AnimalQuizBot?start=share"
+    share_text = f"Я прошёл викторину и получил результат: {result_text} 👉 {bot_link}"
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🔁 Попробовать ещё раз", callback_data="restart")],
+        [InlineKeyboardButton("📤 Поделиться в Telegram", url=f"https://t.me/share/url?url={bot_link}&text={share_text}")],
+        [InlineKeyboardButton("📲 Поделиться в VK", url=f"https://vk.com/share.php?url={bot_link}")],
+        [InlineKeyboardButton("🐦 Поделиться в X (Twitter)", url=f"https://twitter.com/intent/tweet?text={share_text}")]
+    ])
 
     try:
         await update.callback_query.message.delete()
@@ -118,7 +132,6 @@ async def show_result(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text=message,
             reply_markup=keyboard
         )
-
 async def start_over(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     user_data[user_id] = {"answers": [], "current_q": 0}
